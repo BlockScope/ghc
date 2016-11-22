@@ -1,0 +1,10 @@
+[1 of 3] Compiling T12441[boot]     (.hs-boot -> .o-boot)
+[2 of 3] Compiling T12441A          (.hs -> .o)
+[3 of 3] Compiling T12441           (.hs -> .o)
+
+T12441.hs-boot:3:1:
+    Identifier ‘f’ has conflicting definitions in the module
+    and its hs-boot file
+    Main module: f :: forall b a. (a, b)
+    Boot file:   f :: forall a b. (a, b)
+    The two types are different
