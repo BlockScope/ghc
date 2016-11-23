@@ -112,10 +112,8 @@ checkHsigIface tcg_env gr
         -- tcg_env (TODO: but maybe this isn't relevant anymore).
         r <- tcLookupImported_maybe name
         case r of
-          Failed err ->
-            addErr err
-          Succeeded real_thing ->
-            checkBootDeclM Nothing False sig_thing real_thing
+          Failed err -> addErr err
+          Succeeded real_thing -> checkBootDeclM Nothing False sig_thing real_thing
       -- The hsig did NOT define this function; that means it must
       -- be a reexport.  In this case, make sure the 'Name' of the
       -- reexport matches the 'Name exported here.

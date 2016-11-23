@@ -1168,8 +1168,8 @@ bootMisMatch mdflags is_boot extra_info real_thing boot_thing
           Just dflags ->
             (showTyExplicit real_thing, showTyExplicit boot_thing)
             where
-              flags = gopt_set dflags Opt_PrintExplicitForalls
-              showTyExplicit = \thing -> text $ showSDoc flags (showTy thing)
+              showTyExplicit = \thing ->
+                text $ showSDoc (gopt_set dflags Opt_PrintExplicitForalls) (showTy thing)
 
 instMisMatch :: Bool -> ClsInst -> SDoc
 instMisMatch is_boot inst
