@@ -9,6 +9,7 @@
 {-# LANGUAGE CPP #-}
 module PprTyThing (
         pprTyThing,
+        pprTyThingForAll,
         pprTyThingInContext,
         pprTyThingLoc,
         pprTyThingInContextLoc,
@@ -20,11 +21,13 @@ module PprTyThing (
 #include "HsVersions.h"
 
 import Type    ( TyThing(..) )
+import IfaceSyn ( IfaceDecl(..) )
+import IfaceType( IfaceType(..), pprIfaceForAll, splitIfaceSigmaTy )
 import CoAxiom ( coAxiomTyCon )
 import HscTypes( tyThingParent_maybe )
 import MkIface ( tyThingToIfaceDecl )
 import Type ( tidyOpenType )
-import IfaceSyn ( pprIfaceDecl, ShowSub(..), ShowHowMuch(..) )
+import IfaceSyn ( pprIfaceDecl, pprIfaceDeclForAll, ShowSub(..), ShowHowMuch(..) )
 import FamInstEnv( FamInst( .. ), FamFlavor(..) )
 import Type( Type, pprTypeApp, pprSigmaType )
 import Name
@@ -124,12 +127,34 @@ pprTyThingInContextLoc tyThing
   = showWithLoc (pprDefinedAt (getName tyThing))
                 (pprTyThingInContext tyThing)
 
+-- | Pretty-prints a 'TyThing' with forall.
+pprTyThingForAll :: TyThing -> SDoc
+pprTyThingForAll thing
+  = case tyThingToIfaceDecl thing of
+      IfaceId { ifName = _
+              , ifType = ty@(IfaceForAllTy _ _)
+              , ifIdDetails = _
+              , ifIdInfo = _
+              } ->
+        ppr_ty_thing_forall True [] thing
+
+      _ ->
+        ppr_ty_thing True [] thing
+
 ------------------------
+newtype IfacePpr = IfacePpr { runPpr :: ShowSub -> IfaceDecl -> SDoc }
+
+ppr_ty_thing_forall :: Bool -> [OccName] -> TyThing -> SDoc
+ppr_ty_thing_forall = ppr_ty_thing_with (IfacePpr { runPpr = pprIfaceDeclForAll })
+
 ppr_ty_thing :: Bool -> [OccName] -> TyThing -> SDoc
+ppr_ty_thing = ppr_ty_thing_with (IfacePpr { runPpr = pprIfaceDecl })
+
 -- We pretty-print 'TyThing' via 'IfaceDecl'
 -- See Note [Pretty-printing TyThings]
-ppr_ty_thing hdr_only path ty_thing
-  = pprIfaceDecl ss (tyThingToIfaceDecl ty_thing)
+ppr_ty_thing_with :: IfacePpr -> Bool -> [OccName] -> TyThing -> SDoc
+ppr_ty_thing_with ifacePpr hdr_only path ty_thing
+  = (runPpr ifacePpr) ss (tyThingToIfaceDecl ty_thing)
   where
     ss = ShowSub { ss_how_much = how_much, ss_ppr_bndr = ppr_bndr }
     how_much | hdr_only  = ShowHeader

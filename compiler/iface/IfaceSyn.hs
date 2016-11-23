@@ -34,7 +34,7 @@ module IfaceSyn (
 
         -- Pretty printing
         pprIfaceExpr,
-        pprIfaceDecl,
+        pprIfaceDecl, pprIfaceDeclForAll,
         ShowSub(..), ShowHowMuch(..)
     ) where
 
@@ -649,6 +649,19 @@ ppr_trim xs
 isIfaceDataInstance :: IfaceTyConParent -> Bool
 isIfaceDataInstance IfNoParent = False
 isIfaceDataInstance _          = True
+
+pprIfaceDeclForAll :: ShowSub -> IfaceDecl -> SDoc
+pprIfaceDeclForAll ss (IfaceId { ifName = var
+                               , ifType = ty@(IfaceForAllTy _ _)
+                               , ifIdDetails = details
+                               , ifIdInfo = info })
+  = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
+              2 (pprIfaceSigmaTypeForAll ty)
+         , ppShowIface ss (ppr details)
+         , ppShowIface ss (ppr info) ]
+
+pprIfaceDeclForAll ss i = pprIfaceDecl ss i
+
 
 pprIfaceDecl :: ShowSub -> IfaceDecl -> SDoc
 -- NB: pprIfaceDecl is also used for pretty-printing TyThings in GHCi

@@ -34,7 +34,7 @@ module IfaceType (
         pprIfaceContext, pprIfaceContextArr,
         pprIfaceIdBndr, pprIfaceLamBndr, pprIfaceTvBndr, pprIfaceTyConBinders,
         pprIfaceBndrs, pprIfaceTcArgs, pprParendIfaceTcArgs,
-        pprIfaceForAllPart, pprIfaceForAll, pprIfaceSigmaType,
+        pprIfaceForAllPart, pprIfaceForAll, pprIfaceSigmaType, pprIfaceSigmaTypeForAll,
         pprIfaceTyLit,
         pprIfaceCoercion, pprParendIfaceCoercion,
         splitIfaceSigmaTy, pprIfaceTypeApp, pprUserIfaceForAll,
@@ -892,6 +892,9 @@ pprIfaceForAllBndr (TvBndr tv _)        = pprIfaceTvBndr True tv
 pprIfaceForAllCoBndr :: (IfLclName, IfaceCoercion) -> SDoc
 pprIfaceForAllCoBndr (tv, kind_co)
   = parens (ppr tv <+> dcolon <+> pprIfaceCoercion kind_co)
+
+pprIfaceSigmaTypeForAll :: IfaceType -> SDoc
+pprIfaceSigmaTypeForAll ty = ppr_iface_sigma_type True ty
 
 pprIfaceSigmaType :: IfaceType -> SDoc
 pprIfaceSigmaType ty = ppr_iface_sigma_type False ty
