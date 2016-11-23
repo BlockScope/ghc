@@ -254,8 +254,7 @@ tcRnModuleTcRnM hsc_env hsc_src
 
         -- Compare the hi-boot iface (if any) with the real thing
         -- Must be done after processing the exports
-        let { dflags = hsc_dflags hsc_env };
-        tcg_env <- checkHiBootIface dflags tcg_env boot_info ;
+        tcg_env <- checkHiBootIface tcg_env boot_info ;
 
         -- The new type env is already available to stuff slurped from
         -- interface files, via TcEnv.setGlobalTypeEnv
@@ -615,13 +614,13 @@ Once we've typechecked the body of the module, we want to compare what
 we've found (gathered in a TypeEnv) with the hi-boot details (if any).
 -}
 
-checkHiBootIface :: DynFlags -> TcGblEnv -> SelfBootInfo -> TcM TcGblEnv
+checkHiBootIface :: TcGblEnv -> SelfBootInfo -> TcM TcGblEnv
 -- Compare the hi-boot file for this module (if there is one)
 -- with the type environment we've just come up with
 -- In the common case where there is no hi-boot file, the list
 -- of boot_names is empty.
 
-checkHiBootIface dflags tcg_env boot_info
+checkHiBootIface tcg_env boot_info
   | NoSelfBoot <- boot_info  -- Common case
   = return tcg_env
 
@@ -643,7 +642,7 @@ checkHiBootIface dflags tcg_env boot_info
           -- DFun we were going to put in.
           -- TODO: Maybe setGlobalTypeEnv should be strict.
         ; tcg_env <- type_env' `seq` setGlobalTypeEnv tcg_env type_env'
-        ; dfun_prs <- checkHiBootIface' dflags local_insts type_env'
+        ; dfun_prs <- checkHiBootIface' local_insts type_env'
                                         local_exports boot_details
         ; let dfun_binds = listToBag [ mkVarBind boot_dfun (nlHsVar dfun)
                                      | (boot_dfun, dfun) <- dfun_prs ]
@@ -688,7 +687,7 @@ checkHiBootIface dflags tcg_env boot_info
 -- go through if_rec_types to lookup the real Id... but
 -- that's what we're trying to setup right now.
 
-checkHiBootIface' :: DynFlags -> [ClsInst] -> TypeEnv -> [AvailInfo]
+checkHiBootIface' :: [ClsInst] -> TypeEnv -> [AvailInfo]
                   -> ModDetails -> TcM [(Id, Id)]
 -- Variant which doesn't require a full TcGblEnv; you could get the
 -- local components from another ModDetails.
@@ -711,7 +710,7 @@ checkHiBootIface' :: DynFlags -> [ClsInst] -> TypeEnv -> [AvailInfo]
 -- (so that this impedance matching is always possible).
 
 checkHiBootIface'
-        dflags local_insts local_type_env local_exports
+        local_insts local_type_env local_exports
         (ModDetails { md_insts = boot_insts, md_fam_insts = boot_fam_insts,
                       md_types = boot_type_env, md_exports = boot_exports })
   = do  { traceTc "checkHiBootIface" $ vcat
@@ -756,7 +755,7 @@ checkHiBootIface'
         -- then compare the definitions
       | Just real_thing <- lookupTypeEnv local_type_env name,
         Just boot_thing <- mb_boot_thing
-      = checkBootDeclM (Just dflags) True boot_thing real_thing
+      = checkBootDeclM True boot_thing real_thing
 
       | otherwise
       = addErrTc (missingBootThing True name "defined in")
@@ -811,13 +810,12 @@ checkHiBootIface'
 
 -- | Compares two things for equivalence between boot-file and normal code,
 -- reporting an error if they don't match up.
-checkBootDeclM :: Maybe DynFlags
-               -> Bool  -- ^ True <=> an hs-boot file (could also be a sig)
+checkBootDeclM :: Bool  -- ^ True <=> an hs-boot file (could also be a sig)
                -> TyThing -> TyThing -> TcM ()
-checkBootDeclM dflags is_boot boot_thing real_thing
+checkBootDeclM is_boot boot_thing real_thing
   = whenIsJust (checkBootDecl is_boot boot_thing real_thing) $ \ err ->
        addErrAt span
-                (bootMisMatch dflags is_boot err real_thing boot_thing)
+                (bootMisMatch is_boot err real_thing boot_thing)
   where
     -- Here we use the span of the boot thing or, if it doesn't have a sensible
     -- span, that of the real thing,
@@ -1144,32 +1142,19 @@ badReexportedBootThing is_boot name name'
         , text "but the implementing module exports a different identifier" <+> quotes (ppr name')
         ]
 
-bootMisMatch :: Maybe DynFlags -> Bool -> SDoc -> TyThing -> TyThing -> SDoc
-bootMisMatch mdflags is_boot extra_info real_thing boot_thing
-  = vcat
-      [ ppr real_thing <+>
-        text "has conflicting definitions in the module",
-        text "and its" <+>
-          (if is_boot
-            then text "hs-boot file"
-            else text "hsig file"),
-        text "Main module:" <+> real_thing',
+bootMisMatch :: Bool -> SDoc -> TyThing -> TyThing -> SDoc
+bootMisMatch is_boot extra_info real_thing boot_thing
+  = vcat [ppr real_thing <+>
+          text "has conflicting definitions in the module",
+          text "and its" <+>
+            (if is_boot then text "hs-boot file"
+                       else text "hsig file"),
+          text "Main module:" <+> PprTyThing.pprTyThing real_thing,
           (if is_boot
             then text "Boot file:  "
             else text "Hsig file: ")
-            <+> boot_thing',
-        extra_info
-      ]
-    where
-      showTy = PprTyThing.pprTyThing
-      (real_thing', boot_thing') =
-        case mdflags of
-          Nothing -> (showTy real_thing, showTy boot_thing)
-          Just dflags ->
-            (showTyExplicit real_thing, showTyExplicit boot_thing)
-            where
-              showTyExplicit = \thing ->
-                text $ showSDoc (gopt_set dflags Opt_PrintExplicitForalls) (showTy thing)
+            <+> PprTyThing.pprTyThing boot_thing,
+          extra_info]
 
 instMisMatch :: Bool -> ClsInst -> SDoc
 instMisMatch is_boot inst

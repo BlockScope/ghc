@@ -113,7 +113,7 @@ checkHsigIface tcg_env gr
         r <- tcLookupImported_maybe name
         case r of
           Failed err -> addErr err
-          Succeeded real_thing -> checkBootDeclM Nothing False sig_thing real_thing
+          Succeeded real_thing -> checkBootDeclM False sig_thing real_thing
       -- The hsig did NOT define this function; that means it must
       -- be a reexport.  In this case, make sure the 'Name' of the
       -- reexport matches the 'Name exported here.
@@ -437,7 +437,7 @@ mergeSignatures lcl_iface0 = do
               , isDFunId id
               = return ()
               | Just thing <- lookupTypeEnv type_env (getName sig_thing)
-              = checkBootDeclM (Just dflags) False sig_thing thing
+              = checkBootDeclM False sig_thing thing
               | otherwise
               = panic "mergeSignatures check_ty"
         mapM_ check_ty (typeEnvElts (md_types details))
