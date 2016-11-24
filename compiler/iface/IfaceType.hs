@@ -828,11 +828,12 @@ ppr_tc_args ctx_prec args
 
 -------------------
 pprIfaceForAllPart :: [IfaceForAllBndr] -> [IfacePredType] -> SDoc -> SDoc
-pprIfaceForAllPart tvs ctxt sdoc = ppr_iface_forall_part ShowForAllWhen tvs ctxt sdoc
+pprIfaceForAllPart tvs ctxt sdoc
+  = ppr_iface_forall_part ShowForAllWhen tvs ctxt sdoc
 
 pprIfaceForAllCoPart :: [(IfLclName, IfaceCoercion)] -> SDoc -> SDoc
-pprIfaceForAllCoPart tvs sdoc =
-    sep [ pprIfaceForAllCo tvs, sdoc ]
+pprIfaceForAllCoPart tvs sdoc
+  = sep [ pprIfaceForAllCo tvs, sdoc ]
 
 ppr_iface_forall_part :: ShowForAllFlag
                       -> [IfaceForAllBndr] -> [IfacePredType] -> SDoc -> SDoc
