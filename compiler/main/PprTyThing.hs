@@ -20,9 +20,7 @@ module PprTyThing (
 #include "HsVersions.h"
 
 import Type    ( TyThing(..) )
-import IfaceSyn ( ShowSub(..), ShowHowMuch(..), IfaceDecl(..)
-                , showDefault, pprIfaceDecl )
-import IfaceType( IfaceType(..), pprIfaceForAll, splitIfaceSigmaTy )
+import IfaceSyn ( ShowSub(..), ShowHowMuch(..), showDefault, pprIfaceDecl )
 import CoAxiom ( coAxiomTyCon )
 import HscTypes( tyThingParent_maybe )
 import MkIface ( tyThingToIfaceDecl )
