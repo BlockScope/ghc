@@ -59,8 +59,8 @@ import Plugins ( tcPlugin )
 import DynFlags
 import StaticFlags
 import HsSyn
-import IfaceSyn ( IfaceDecl(..) )
-import IfaceType( IfaceType(..), splitIfaceSigmaTy )
+import IfaceSyn ( IfaceDecl(..), ShowSub(..), showDefault )
+import IfaceType( IfaceType(..), ShowForAllFlag(..), splitIfaceSigmaTy )
 import PrelNames
 import RdrName
 import TcHsSyn
@@ -68,7 +68,7 @@ import TcExpr
 import TcRnMonad
 import TcRnExports
 import TcEvidence
-import PprTyThing( pprTyThing, pprTyThingForAll )
+import PprTyThing( pprTyThing )
 import MkIface( tyThingToIfaceDecl )
 import Coercion( pprCoAxiom )
 import CoreFVs( orphNamesOfFamInst )
@@ -1148,8 +1148,9 @@ bootMisMatch :: Bool -> SDoc -> TyThing -> TyThing -> SDoc
 bootMisMatch is_boot extra_info real_thing boot_thing
   = pprBootMisMatch is_boot extra_info real_thing real_doc boot_doc
   where
-    real_doc = pprTyThingForAll real_thing
-    boot_doc = pprTyThingForAll boot_thing
+    to_doc = pprTyThing $ showDefault { ss_forall = ShowForAllMust }
+    real_doc = to_doc real_thing
+    boot_doc = to_doc boot_thing
 
     pprBootMisMatch :: Bool -> SDoc -> TyThing -> SDoc -> SDoc -> SDoc
     pprBootMisMatch is_boot extra_info real_thing real_doc boot_doc
@@ -2476,7 +2477,7 @@ ppr_tydecls tycons
   = vcat [ ppr (tyThingToIfaceDecl (ATyCon tc))
          | tc <- sortBy (comparing getOccName) tycons ]
     -- The Outputable instance for IfaceDecl uses
-    -- showAll, which is what we want here, whereas
+    -- showDefault, which is what we want here, whereas
     -- pprTyThing uses ShowSome.
 
 {-

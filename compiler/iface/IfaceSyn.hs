@@ -34,8 +34,8 @@ module IfaceSyn (
 
         -- Pretty printing
         pprIfaceExpr,
-        pprIfaceDecl, pprIfaceDeclForAll,
-        ShowSub(..), ShowHowMuch(..)
+        pprIfaceDecl,
+        ShowSub(..), ShowHowMuch(..), showDefault
     ) where
 
 #include "HsVersions.h"
@@ -571,7 +571,7 @@ instance HasOccName IfaceDecl where
   occName = getOccName
 
 instance Outputable IfaceDecl where
-  ppr = pprIfaceDecl showAll
+  ppr = pprIfaceDecl showDefault
 
 {-
 Note [Minimal complete definition] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -587,7 +587,8 @@ data ShowSub
   = ShowSub
       { ss_ppr_bndr :: OccName -> SDoc  -- Pretty-printer for binders in IfaceDecl
                                         -- See Note [Printing IfaceDecl binders]
-      , ss_how_much :: ShowHowMuch }
+      , ss_how_much :: ShowHowMuch
+      , ss_forall :: ShowForAllFlag }
 
 data ShowHowMuch
   = ShowHeader   -- Header information only, not rhs
@@ -602,8 +603,10 @@ instance Outputable ShowHowMuch where
   ppr ShowIface       = text "ShowIface"
   ppr (ShowSome occs) = text "ShowSome" <+> ppr occs
 
-showAll :: ShowSub
-showAll = ShowSub { ss_how_much = ShowIface, ss_ppr_bndr = ppr }
+showDefault :: ShowSub
+showDefault = ShowSub { ss_ppr_bndr = ppr
+                      , ss_how_much = ShowIface
+                      , ss_forall = ShowForAllWhen }
 
 ppShowIface :: ShowSub -> SDoc -> SDoc
 ppShowIface (ShowSub { ss_how_much = ShowIface }) doc = doc
@@ -649,19 +652,6 @@ ppr_trim xs
 isIfaceDataInstance :: IfaceTyConParent -> Bool
 isIfaceDataInstance IfNoParent = False
 isIfaceDataInstance _          = True
-
-pprIfaceDeclForAll :: ShowSub -> IfaceDecl -> SDoc
-pprIfaceDeclForAll ss (IfaceId { ifName = var
-                               , ifType = ty@(IfaceForAllTy _ _)
-                               , ifIdDetails = details
-                               , ifIdInfo = info })
-  = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
-              2 (pprIfaceSigmaType ShowForAllMust ty)
-         , ppShowIface ss (ppr details)
-         , ppShowIface ss (ppr info) ]
-
-pprIfaceDeclForAll ss i = pprIfaceDecl ss i
-
 
 pprIfaceDecl :: ShowSub -> IfaceDecl -> SDoc
 -- NB: pprIfaceDecl is also used for pretty-printing TyThings in GHCi
@@ -827,7 +817,7 @@ pprIfaceDecl _ (IfacePatSyn { ifName = name,
 pprIfaceDecl ss (IfaceId { ifName = var, ifType = ty,
                               ifIdDetails = details, ifIdInfo = info })
   = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
-              2 (pprIfaceSigmaType ShowForAllWhen ty)
+              2 (pprIfaceSigmaType (ss_forall ss) ty)
          , ppShowIface ss (ppr details)
          , ppShowIface ss (ppr info) ]
 
@@ -858,7 +848,7 @@ pprPrefixIfDeclBndr (ShowSub { ss_ppr_bndr = ppr_bndr }) name
   = parenSymOcc name (ppr_bndr name)
 
 instance Outputable IfaceClassOp where
-   ppr = pprIfaceClassOp showAll
+   ppr = pprIfaceClassOp showDefault
 
 pprIfaceClassOp :: ShowSub -> IfaceClassOp -> SDoc
 pprIfaceClassOp ss (IfaceClassOp n ty dm)
@@ -874,7 +864,7 @@ pprIfaceClassOp ss (IfaceClassOp n ty dm)
      <+> pprIfaceSigmaType ShowForAllWhen ty
 
 instance Outputable IfaceAT where
-   ppr = pprIfaceAT showAll
+   ppr = pprIfaceAT showDefault
 
 pprIfaceAT :: ShowSub -> IfaceAT -> SDoc
 pprIfaceAT ss (IfaceAT d mb_def)
