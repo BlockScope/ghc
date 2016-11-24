@@ -96,7 +96,8 @@ pprFamInst (FamInst { fi_flavor = SynFamilyInst, fi_axiom = axiom
 -- | Pretty-prints a 'TyThing' with its defining location.
 pprTyThingLoc :: TyThing -> SDoc
 pprTyThingLoc tyThing
-  = showWithLoc (pprDefinedAt (getName tyThing)) (pprTyThing showDefault tyThing)
+  = showWithLoc (pprDefinedAt (getName tyThing))
+                (pprTyThing showDefault tyThing)
 
 -- | Pretty-prints the 'TyThing' header. For functions and data constructors
 -- the function is equivalent to 'pprTyThing' but for type constructors
