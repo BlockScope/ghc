@@ -1146,33 +1146,10 @@ badReexportedBootThing is_boot name name'
 
 bootMisMatch :: Bool -> SDoc -> TyThing -> TyThing -> SDoc
 bootMisMatch is_boot extra_info real_thing boot_thing
-  = case (real_bndrs, boot_bndrs) of
-      ([], []) -> go pprTyThing       pprTyThing
-      ( _, []) -> go pprTyThingForAll pprTyThing
-      ([],  _) -> go pprTyThing       pprTyThingForAll
-      (xs, ys)
-        | (pprString <$> xs) == (pprString <$> ys) ->
-                  go pprTyThing       pprTyThing
-        | otherwise ->
-                  go pprTyThingForAll pprTyThingForAll
-
+  = pprBootMisMatch is_boot extra_info real_thing real_doc boot_doc
   where
-    -- Use pprString so that I have an instance of Eq.
-    pprString = showSDocUnsafe . ppr
-    real_bndrs = forAllBndrs real_thing
-    boot_bndrs = forAllBndrs boot_thing
-    go f g = pprBootMisMatch is_boot extra_info real_thing (f real_thing) (g boot_thing)
-
-    forAllBndrs thing
-      = case tyThingToIfaceDecl thing of
-          IfaceId { ifName = _
-                  , ifType = x@(IfaceForAllTy _ _)
-                  , ifIdDetails = _
-                  , ifIdInfo = _
-                  } ->
-            let (bndrs, _, _) = splitIfaceSigmaTy x in bndrs
-
-          _ -> []
+    real_doc = pprTyThingForAll real_thing
+    boot_doc = pprTyThingForAll boot_thing
 
     pprBootMisMatch :: Bool -> SDoc -> TyThing -> SDoc -> SDoc -> SDoc
     pprBootMisMatch is_boot extra_info real_thing real_doc boot_doc
