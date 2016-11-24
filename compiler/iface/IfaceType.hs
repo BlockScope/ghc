@@ -18,7 +18,7 @@ module IfaceType (
         IfaceTyLit(..), IfaceTcArgs(..),
         IfaceContext, IfaceBndr(..), IfaceOneShot(..), IfaceLamBndr,
         IfaceTvBndr, IfaceIdBndr, IfaceTyConBinder,
-        IfaceForAllBndr, ArgFlag(..),
+        IfaceForAllBndr, ArgFlag(..), ShowForAllFlag(..),
 
         ifTyConBinderTyVar, ifTyConBinderName,
 
@@ -34,8 +34,7 @@ module IfaceType (
         pprIfaceContext, pprIfaceContextArr,
         pprIfaceIdBndr, pprIfaceLamBndr, pprIfaceTvBndr, pprIfaceTyConBinders,
         pprIfaceBndrs, pprIfaceTcArgs, pprParendIfaceTcArgs,
-        pprIfaceForAllPart, pprIfaceForAll,
-        pprIfaceSigmaType, pprIfaceSigmaTypeForAll,
+        pprIfaceForAllPart, pprIfaceForAll, pprIfaceSigmaType,
         pprIfaceTyLit,
         pprIfaceCoercion, pprParendIfaceCoercion,
         splitIfaceSigmaTy, pprIfaceTypeApp, pprUserIfaceForAll,
@@ -720,7 +719,7 @@ ppr_ty ctxt_prec (IfaceCoercionTy co)
       (text "<>")
 
 ppr_ty ctxt_prec ty
-  = maybeParen ctxt_prec FunPrec (ppr_iface_sigma_type True ty)
+  = maybeParen ctxt_prec FunPrec (pprIfaceSigmaType ShowForAllMust ty)
 
 {-
 Note [Defaulting RuntimeRep variables]
@@ -828,26 +827,19 @@ ppr_tc_args ctx_prec args
         ITC_Invis t ts -> pprTys t ts
 
 -------------------
-ppr_iface_sigma_type :: Bool -> IfaceType -> SDoc
-ppr_iface_sigma_type show_foralls_unconditionally ty
-  = ppr_iface_forall_part show_foralls_unconditionally tvs theta (ppr tau)
-  where
-    (tvs, theta, tau) = splitIfaceSigmaTy ty
-
--------------------
 pprIfaceForAllPart :: [IfaceForAllBndr] -> [IfacePredType] -> SDoc -> SDoc
-pprIfaceForAllPart tvs ctxt sdoc = ppr_iface_forall_part False tvs ctxt sdoc
+pprIfaceForAllPart tvs ctxt sdoc = ppr_iface_forall_part ShowForAllWhen tvs ctxt sdoc
 
 pprIfaceForAllCoPart :: [(IfLclName, IfaceCoercion)] -> SDoc -> SDoc
 pprIfaceForAllCoPart tvs sdoc =
     sep [ pprIfaceForAllCo tvs, sdoc ]
 
-ppr_iface_forall_part :: Bool
+ppr_iface_forall_part :: ShowForAllFlag
                       -> [IfaceForAllBndr] -> [IfacePredType] -> SDoc -> SDoc
-ppr_iface_forall_part show_foralls_unconditionally tvs ctxt sdoc
-  = sep [ if show_foralls_unconditionally
-          then pprIfaceForAll tvs
-          else pprUserIfaceForAll tvs
+ppr_iface_forall_part show_forall tvs ctxt sdoc
+  = sep [ case show_forall of
+            ShowForAllMust -> pprIfaceForAll tvs
+            ShowForAllWhen -> pprUserIfaceForAll tvs
         , pprIfaceContextArr ctxt
         , sdoc]
 
@@ -894,11 +886,18 @@ pprIfaceForAllCoBndr :: (IfLclName, IfaceCoercion) -> SDoc
 pprIfaceForAllCoBndr (tv, kind_co)
   = parens (ppr tv <+> dcolon <+> pprIfaceCoercion kind_co)
 
-pprIfaceSigmaTypeForAll :: IfaceType -> SDoc
-pprIfaceSigmaTypeForAll ty = ppr_iface_sigma_type True ty
+-- | Show forall flag
+--
+-- Unconditionally show the forall quantifier with ('ShowForAllMust')
+-- or when ('ShowForAllWhen') the names used are free in the binder
+-- or when compiling with -fprint-explicit-foralls.
+data ShowForAllFlag = ShowForAllMust | ShowForAllWhen
 
-pprIfaceSigmaType :: IfaceType -> SDoc
-pprIfaceSigmaType ty = ppr_iface_sigma_type False ty
+pprIfaceSigmaType :: ShowForAllFlag -> IfaceType -> SDoc
+pprIfaceSigmaType show_forall ty
+  = ppr_iface_forall_part show_forall tvs theta (ppr tau)
+  where
+    (tvs, theta, tau) = splitIfaceSigmaTy ty
 
 pprUserIfaceForAll :: [IfaceForAllBndr] -> SDoc
 pprUserIfaceForAll tvs

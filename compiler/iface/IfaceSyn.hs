@@ -656,7 +656,7 @@ pprIfaceDeclForAll ss (IfaceId { ifName = var
                                , ifIdDetails = details
                                , ifIdInfo = info })
   = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
-              2 (pprIfaceSigmaTypeForAll ty)
+              2 (pprIfaceSigmaType ShowForAllMust ty)
          , ppShowIface ss (ppr details)
          , ppShowIface ss (ppr info) ]
 
@@ -827,7 +827,7 @@ pprIfaceDecl _ (IfacePatSyn { ifName = name,
 pprIfaceDecl ss (IfaceId { ifName = var, ifType = ty,
                               ifIdDetails = details, ifIdInfo = info })
   = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
-              2 (pprIfaceSigmaType ty)
+              2 (pprIfaceSigmaType ShowForAllWhen ty)
          , ppShowIface ss (ppr details)
          , ppShowIface ss (ppr info) ]
 
@@ -868,7 +868,10 @@ pprIfaceClassOp ss (IfaceClassOp n ty dm)
               =  text "default" <+> pp_sig n dm_ty
               | otherwise
               = empty
-   pp_sig n ty = pprPrefixIfDeclBndr ss (occName n) <+> dcolon <+> pprIfaceSigmaType ty
+   pp_sig n ty
+     = pprPrefixIfDeclBndr ss (occName n)
+     <+> dcolon
+     <+> pprIfaceSigmaType ShowForAllWhen ty
 
 instance Outputable IfaceAT where
    ppr = pprIfaceAT showAll
