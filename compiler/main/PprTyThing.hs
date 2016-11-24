@@ -27,7 +27,8 @@ import CoAxiom ( coAxiomTyCon )
 import HscTypes( tyThingParent_maybe )
 import MkIface ( tyThingToIfaceDecl )
 import Type ( tidyOpenType )
-import IfaceSyn ( pprIfaceDecl, pprIfaceDeclForAll, ShowSub(..), ShowHowMuch(..) )
+import IfaceSyn ( pprIfaceDecl , pprIfaceDeclForAll
+                , ShowSub(..), ShowHowMuch(..) )
 import FamInstEnv( FamInst( .. ), FamFlavor(..) )
 import Type( Type, pprTypeApp, pprSigmaType )
 import Name
@@ -145,7 +146,8 @@ pprTyThingForAll thing
 newtype IfacePpr = IfacePpr { runPpr :: ShowSub -> IfaceDecl -> SDoc }
 
 ppr_ty_thing_forall :: Bool -> [OccName] -> TyThing -> SDoc
-ppr_ty_thing_forall = ppr_ty_thing_with (IfacePpr { runPpr = pprIfaceDeclForAll })
+ppr_ty_thing_forall
+  = ppr_ty_thing_with (IfacePpr { runPpr = pprIfaceDeclForAll })
 
 ppr_ty_thing :: Bool -> [OccName] -> TyThing -> SDoc
 ppr_ty_thing = ppr_ty_thing_with (IfacePpr { runPpr = pprIfaceDecl })
