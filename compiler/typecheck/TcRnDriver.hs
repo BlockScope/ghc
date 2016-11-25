@@ -59,8 +59,8 @@ import Plugins ( tcPlugin )
 import DynFlags
 import StaticFlags
 import HsSyn
-import IfaceSyn ( IfaceDecl(..), ShowSub(..), showDefault )
-import IfaceType( IfaceType(..), ShowForAllFlag(..), splitIfaceSigmaTy )
+import IfaceSyn ( ShowSub(..), showDefault )
+import IfaceType( ShowForAllFlag(..) )
 import PrelNames
 import RdrName
 import TcHsSyn
