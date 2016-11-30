@@ -22,7 +22,7 @@ import GHCi.RemoteTypes
 import GhcMonad
 import HscTypes
 import Id
-import IfaceSyn ( ShowSub(..), showDefault )
+import IfaceSyn ( showDefault )
 import IfaceEnv( newInteractiveBinder )
 import Name
 import Var hiding ( varName )
