@@ -68,7 +68,7 @@ import TcExpr
 import TcRnMonad
 import TcRnExports
 import TcEvidence
-import PprTyThing( pprTyThing, pprTyThingInContext )
+import PprTyThing( pprTyThingInContext )
 import MkIface( tyThingToIfaceDecl )
 import Coercion( pprCoAxiom )
 import CoreFVs( orphNamesOfFamInst )
