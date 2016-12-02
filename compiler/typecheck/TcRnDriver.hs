@@ -1148,7 +1148,12 @@ bootMisMatch :: Bool -> SDoc -> TyThing -> TyThing -> SDoc
 bootMisMatch is_boot extra_info real_thing boot_thing
   = pprBootMisMatch is_boot extra_info real_thing real_doc boot_doc
   where
-    to_doc = pprTyThingInContext $ showToHeader { ss_forall = ShowForAllMust }
+    to_doc
+      = pprTyThingInContext $ showToHeader { ss_forall =
+                                              if is_boot
+                                                then ShowForAllMust
+                                                else ShowForAllWhen }
+
     real_doc = to_doc real_thing
     boot_doc = to_doc boot_thing
 
