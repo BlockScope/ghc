@@ -20,7 +20,7 @@ module PprTyThing (
 #include "HsVersions.h"
 
 import Type    ( TyThing(..) )
-import IfaceSyn ( ShowSub(..), ShowHowMuch(..), showDefault, pprIfaceDecl )
+import IfaceSyn ( ShowSub(..), ShowHowMuch(..), showToHeader, pprIfaceDecl )
 import CoAxiom ( coAxiomTyCon )
 import HscTypes( tyThingParent_maybe )
 import MkIface ( tyThingToIfaceDecl )
@@ -95,20 +95,20 @@ pprFamInst (FamInst { fi_flavor = SynFamilyInst, fi_axiom = axiom
 pprTyThingLoc :: TyThing -> SDoc
 pprTyThingLoc tyThing
   = showWithLoc (pprDefinedAt (getName tyThing))
-                (pprTyThing showDefault tyThing)
+                (pprTyThing showToHeader tyThing)
 
 -- | Pretty-prints the 'TyThing' header. For functions and data constructors
 -- the function is equivalent to 'pprTyThing' but for type constructors
 -- and classes it prints only the header part of the declaration.
 pprTyThingHdr :: TyThing -> SDoc
-pprTyThingHdr = pprTyThing (showDefault { ss_how_much = ShowHeader })
+pprTyThingHdr = pprTyThing showToHeader
 
 -- | Pretty-prints a 'TyThing' in context: that is, if the entity
 -- is a data constructor, record selector, or class method, then
 -- the entity's parent declaration is pretty-printed with irrelevant
 -- parts omitted.
-pprTyThingInContext :: TyThing -> SDoc
-pprTyThingInContext thing
+pprTyThingInContext :: ShowSub -> TyThing -> SDoc
+pprTyThingInContext show_sub thing
   = go [] thing
   where
     go ss thing
@@ -116,13 +116,13 @@ pprTyThingInContext thing
           Just parent ->
             go (getOccName thing : ss) parent
           Nothing ->
-            pprTyThing (showDefault { ss_how_much = ShowSome ss }) thing
+            pprTyThing (show_sub { ss_how_much = ShowSome ss }) thing
 
 -- | Like 'pprTyThingInContext', but adds the defining location.
 pprTyThingInContextLoc :: TyThing -> SDoc
 pprTyThingInContextLoc tyThing
   = showWithLoc (pprDefinedAt (getName tyThing))
-                (pprTyThingInContext tyThing)
+                (pprTyThingInContext showToHeader tyThing)
 
 -- | Pretty-prints a 'TyThing'.
 pprTyThing :: ShowSub -> TyThing -> SDoc

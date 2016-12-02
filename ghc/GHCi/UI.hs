@@ -56,7 +56,7 @@ import Module
 import Name
 import Packages ( trusted, getPackageDetails, getInstalledPackageDetails,
                   listVisibleModuleNames, pprFlag )
-import IfaceSyn ( showDefault )
+import IfaceSyn ( showToHeader )
 import PprTyThing
 import PrelNames
 import RdrName ( RdrName, getGRE_NameQualifier_maybes, getRdrName )
@@ -2136,8 +2136,8 @@ browseModule bang modl exports_only = do
 
         let things | bang      = catMaybes mb_things
                    | otherwise = filtered_things
-            pretty | bang      = pprTyThing showDefault
-                   | otherwise = pprTyThingInContext
+            pretty | bang      = pprTyThing showToHeader
+                   | otherwise = pprTyThingInContext showToHeader
 
             labels  [] = text "-- not currently imported"
             labels  l  = text $ intercalate "\n" $ map qualifier l
@@ -2831,7 +2831,7 @@ showBindings = do
 
     pprTT :: (TyThing, Fixity, [GHC.ClsInst], [GHC.FamInst]) -> SDoc
     pprTT (thing, fixity, _cls_insts, _fam_insts)
-      = pprTyThing showDefault thing
+      = pprTyThing showToHeader thing
         $$ show_fixity
       where
         show_fixity
@@ -2840,7 +2840,7 @@ showBindings = do
 
 
 printTyThing :: TyThing -> GHCi ()
-printTyThing tyth = printForUser (pprTyThing showDefault tyth)
+printTyThing tyth = printForUser (pprTyThing showToHeader tyth)
 
 showBkptTable :: GHCi ()
 showBkptTable = do

@@ -22,7 +22,7 @@ import GHCi.RemoteTypes
 import GhcMonad
 import HscTypes
 import Id
-import IfaceSyn ( showDefault )
+import IfaceSyn ( showToHeader )
 import IfaceEnv( newInteractiveBinder )
 import Name
 import Var hiding ( varName )
@@ -216,7 +216,7 @@ pprTypeAndContents :: GhcMonad m => Id -> m SDoc
 pprTypeAndContents id = do
   dflags  <- GHC.getSessionDynFlags
   let pcontents = gopt Opt_PrintBindContents dflags
-      pprdId    = ((pprTyThing showDefault). AnId) id
+      pprdId    = ((pprTyThing showToHeader). AnId) id
   if pcontents
     then do
       let depthBound = 100

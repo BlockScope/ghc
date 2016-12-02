@@ -35,7 +35,7 @@ module IfaceSyn (
         -- Pretty printing
         pprIfaceExpr,
         pprIfaceDecl,
-        ShowSub(..), ShowHowMuch(..), showDefault
+        ShowSub(..), ShowHowMuch(..), showToIface, showToHeader
     ) where
 
 #include "HsVersions.h"
@@ -571,7 +571,7 @@ instance HasOccName IfaceDecl where
   occName = getOccName
 
 instance Outputable IfaceDecl where
-  ppr = pprIfaceDecl showDefault
+  ppr = pprIfaceDecl showToIface
 
 {-
 Note [Minimal complete definition] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -603,8 +603,13 @@ instance Outputable ShowHowMuch where
   ppr ShowIface       = text "ShowIface"
   ppr (ShowSome occs) = text "ShowSome" <+> ppr occs
 
-showDefault :: ShowSub
-showDefault = ShowSub { ss_ppr_bndr = ppr
+showToHeader :: ShowSub
+showToHeader = ShowSub { ss_ppr_bndr = ppr
+                       , ss_how_much = ShowHeader
+                       , ss_forall = ShowForAllWhen }
+
+showToIface :: ShowSub
+showToIface = ShowSub { ss_ppr_bndr = ppr
                       , ss_how_much = ShowIface
                       , ss_forall = ShowForAllWhen }
 
@@ -848,7 +853,7 @@ pprPrefixIfDeclBndr (ShowSub { ss_ppr_bndr = ppr_bndr }) name
   = parenSymOcc name (ppr_bndr name)
 
 instance Outputable IfaceClassOp where
-   ppr = pprIfaceClassOp showDefault
+   ppr = pprIfaceClassOp showToIface
 
 pprIfaceClassOp :: ShowSub -> IfaceClassOp -> SDoc
 pprIfaceClassOp ss (IfaceClassOp n ty dm)
@@ -864,7 +869,7 @@ pprIfaceClassOp ss (IfaceClassOp n ty dm)
      <+> pprIfaceSigmaType ShowForAllWhen ty
 
 instance Outputable IfaceAT where
-   ppr = pprIfaceAT showDefault
+   ppr = pprIfaceAT showToIface
 
 pprIfaceAT :: ShowSub -> IfaceAT -> SDoc
 pprIfaceAT ss (IfaceAT d mb_def)
