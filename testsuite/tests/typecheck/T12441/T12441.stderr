@@ -1,6 +1,6 @@
-[1 of 3] Compiling T12441[boot]     (.hs-boot -> .o-boot)
-[2 of 3] Compiling T12441A          (.hs -> .o)
-[3 of 3] Compiling T12441           (.hs -> .o)
+[1 of 3] Compiling T12441[boot]     ( T12441.hs-boot, T12441.o-boot )
+[2 of 3] Compiling T12441A          ( T12441A.hs, T12441A.o ) 
+[3 of 3] Compiling T12441           ( T12441.hs, T12441.o )
 
 T12441.hs-boot:3:1:
     Identifier ‘f’ has conflicting definitions in the module
