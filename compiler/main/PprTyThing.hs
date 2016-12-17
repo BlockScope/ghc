@@ -131,7 +131,11 @@ pprTyThing :: ShowSub -> TyThing -> SDoc
 pprTyThing ss ty_thing
   = pprIfaceDecl ss' (tyThingToIfaceDecl ty_thing)
   where
-    ss' = ss { ss_ppr_bndr = ppr_bndr $ getName ty_thing }
+    ss' = case ss_how_much ss of
+      ShowHeader  -> ss
+      ShowSome _  -> ss
+      ShowIface _ -> ss { ss_how_much = ShowIface (ppr_bndr $ getName ty_thing) }
+
     ppr_bndr :: Name -> OccName -> SDoc
     ppr_bndr name
       | isBuiltInSyntax name

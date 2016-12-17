@@ -582,55 +582,22 @@ filtering of method signatures. Instead we just check if anything at all is
 filtered and hide it in that case.
 -}
 
--- TODO: Kill this and Note [Printing IfaceDecl binders]
 data ShowSub
   = ShowSub
-      { ss_ppr_bndr :: OccName -> SDoc  -- Pretty-printer for binders in IfaceDecl
-                                        -- See Note [Printing IfaceDecl binders]
-      , ss_how_much :: ShowHowMuch
+      { ss_how_much :: ShowHowMuch
       , ss_forall :: ShowForAllFlag }
 
 data ShowHowMuch
-  = ShowHeader   -- Header information only, not rhs
-  | ShowSome [OccName]    -- []     <=> Print all sub-components
-                          -- (n:ns) <=> print sub-component 'n' with ShowSub=ns
-                          --            elide other sub-components to "..."
-                          -- May 14: the list is max 1 element long at the moment
-  | ShowIface    -- Everything including GHC-internal information (used in --show-iface)
-
-instance Outputable ShowHowMuch where
-  ppr ShowHeader      = text "ShowHeader"
-  ppr ShowIface       = text "ShowIface"
-  ppr (ShowSome occs) = text "ShowSome" <+> ppr occs
-
-showToHeader :: ShowSub
-showToHeader = ShowSub { ss_ppr_bndr = ppr
-                       , ss_how_much = ShowHeader
-                       , ss_forall = ShowForAllWhen }
-
-showToIface :: ShowSub
-showToIface = ShowSub { ss_ppr_bndr = ppr
-                      , ss_how_much = ShowIface
-                      , ss_forall = ShowForAllWhen }
-
-ppShowIface :: ShowSub -> SDoc -> SDoc
-ppShowIface (ShowSub { ss_how_much = ShowIface }) doc = doc
-ppShowIface _                                     _   = Outputable.empty
-
--- show if all sub-components or the complete interface is shown
-ppShowAllSubs :: ShowSub -> SDoc -> SDoc -- Note [Minimal complete definition]
-ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] }) doc = doc
-ppShowAllSubs (ShowSub { ss_how_much = ShowIface }) doc = doc
-ppShowAllSubs _                                      _   = Outputable.empty
-
-ppShowRhs :: ShowSub -> SDoc -> SDoc
-ppShowRhs (ShowSub { ss_how_much = ShowHeader }) _   = Outputable.empty
-ppShowRhs _                                      doc = doc
-
-showSub :: HasOccName n => ShowSub -> n -> Bool
-showSub (ShowSub { ss_how_much = ShowHeader })     _     = False
-showSub (ShowSub { ss_how_much = ShowSome (n:_) }) thing = n == occName thing
-showSub (ShowSub { ss_how_much = _ })              _     = True
+  -- |Header information only, not rhs
+  = ShowHeader
+  {-|
+  []     <=> Print all sub-components
+  (n:ns) <=> print sub-component 'n' with ShowSub=ns, elide other sub-components to "..."
+  -}
+  -- May 14: the list is max 1 element long at the moment
+  | ShowSome [OccName]
+  -- |Everything including GHC-internal information (used in --show-iface)
+  | ShowIface (OccName -> SDoc)
 
 {-
 Note [Printing IfaceDecl binders]
@@ -644,6 +611,38 @@ binders.
 When printing an interface file (--show-iface), we want to print
 everything unqualified, so we can just print the OccName directly.
 -}
+
+instance Outputable ShowHowMuch where
+  ppr ShowHeader      = text "ShowHeader"
+  ppr (ShowIface _)   = text "ShowIface"
+  ppr (ShowSome occs) = text "ShowSome" <+> ppr occs
+
+showToHeader :: ShowSub
+showToHeader = ShowSub { ss_how_much = ShowHeader
+                       , ss_forall = ShowForAllWhen }
+
+showToIface :: ShowSub
+showToIface = ShowSub { ss_how_much = ShowIface ppr
+                      , ss_forall = ShowForAllWhen }
+
+ppShowIface :: ShowSub -> SDoc -> SDoc
+ppShowIface (ShowSub { ss_how_much = ShowIface ppr }) doc = doc
+ppShowIface _                                         _   = Outputable.empty
+
+-- show if all sub-components or the complete interface is shown
+ppShowAllSubs :: ShowSub -> SDoc -> SDoc -- Note [Minimal complete definition]
+ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] })   doc = doc
+ppShowAllSubs (ShowSub { ss_how_much = ShowIface ppr }) doc = doc
+ppShowAllSubs _                                         _   = Outputable.empty
+
+ppShowRhs :: ShowSub -> SDoc -> SDoc
+ppShowRhs (ShowSub { ss_how_much = ShowHeader }) _   = Outputable.empty
+ppShowRhs _                                      doc = doc
+
+showSub :: HasOccName n => ShowSub -> n -> Bool
+showSub (ShowSub { ss_how_much = ShowHeader })     _     = False
+showSub (ShowSub { ss_how_much = ShowSome (n:_) }) thing = n == occName thing
+showSub (ShowSub { ss_how_much = _ })              _     = True
 
 ppr_trim :: [Maybe SDoc] -> [SDoc]
 -- Collapse a group of Nothings to a single "..."
@@ -690,7 +689,9 @@ pprIfaceDecl ss (IfaceData { ifName = tycon, ifCType = ctype,
     pp_roles
       | is_data_instance = empty
       | otherwise        = pprRoles (== Representational)
-                                    (pprPrefixIfDeclBndr ss (occName tycon))
+                                    (pprPrefixIfDeclBndr
+                                        (ss_how_much ss)
+                                        (occName tycon))
                                     binders roles
             -- Don't display roles for data family instances (yet)
             -- See discussion on Trac #8672.
@@ -721,7 +722,11 @@ pprIfaceDecl ss (IfaceClass { ifATs = ats, ifSigs = sigs
                             , ifRoles = roles
                             , ifFDs    = fds, ifMinDef = minDef
                             , ifBinders = binders })
-  = vcat [ pprRoles (== Nominal) (pprPrefixIfDeclBndr ss (occName clas)) binders roles
+  = vcat [ pprRoles
+             (== Nominal)
+             (pprPrefixIfDeclBndr (ss_how_much ss) (occName clas))
+             binders
+             roles
          , text "class" <+> pprIfaceDeclHead context ss clas binders Nothing
                                 <+> pprFundeps fds <+> pp_where
          , nest 2 (vcat [ vcat asocs, vcat dsigs
@@ -795,7 +800,11 @@ pprIfaceDecl ss (IfaceFamily { ifName = tycon
 
     pp_branches (IfaceClosedSynFamilyTyCon (Just (ax, brs)))
       = hang (text "where")
-           2 (vcat (map (pprAxBranch (pprPrefixIfDeclBndr ss (occName tycon))) brs)
+           2 (vcat (map (pprAxBranch
+                           (pprPrefixIfDeclBndr
+                             (ss_how_much ss)
+                             (occName tycon))
+                        ) brs)
               $$ ppShowIface ss (text "axiom" <+> ppr ax))
     pp_branches _ = Outputable.empty
 
@@ -821,7 +830,7 @@ pprIfaceDecl _ (IfacePatSyn { ifName = name,
 
 pprIfaceDecl ss (IfaceId { ifName = var, ifType = ty,
                               ifIdDetails = details, ifIdInfo = info })
-  = vcat [ hang (pprPrefixIfDeclBndr ss (occName var) <+> dcolon)
+  = vcat [ hang (pprPrefixIfDeclBndr (ss_how_much ss) (occName var) <+> dcolon)
               2 (pprIfaceSigmaType (ss_forall ss) ty)
          , ppShowIface ss (ppr details)
          , ppShowIface ss (ppr info) ]
@@ -846,11 +855,17 @@ pprRoles suppress_if tyCon bndrs roles
       in ppUnless (all suppress_if roles || null froles) $
          text "type role" <+> tyCon <+> hsep (map ppr froles)
 
-pprInfixIfDeclBndr, pprPrefixIfDeclBndr :: ShowSub -> OccName -> SDoc
-pprInfixIfDeclBndr (ShowSub { ss_ppr_bndr = ppr_bndr }) name
+pprInfixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
+pprInfixIfDeclBndr (ShowIface ppr_bndr) name
   = pprInfixVar (isSymOcc name) (ppr_bndr name)
-pprPrefixIfDeclBndr (ShowSub { ss_ppr_bndr = ppr_bndr }) name
+pprInfixIfDeclBndr _ name
+  = pprInfixVar (isSymOcc name) (ppr name)
+
+pprPrefixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
+pprPrefixIfDeclBndr (ShowIface ppr_bndr) name
   = parenSymOcc name (ppr_bndr name)
+pprPrefixIfDeclBndr _ name
+  = parenSymOcc name (ppr name)
 
 instance Outputable IfaceClassOp where
    ppr = pprIfaceClassOp showToIface
@@ -864,7 +879,7 @@ pprIfaceClassOp ss (IfaceClassOp n ty dm)
               | otherwise
               = empty
    pp_sig n ty
-     = pprPrefixIfDeclBndr ss (occName n)
+     = pprPrefixIfDeclBndr (ss_how_much ss) (occName n)
      <+> dcolon
      <+> pprIfaceSigmaType ShowForAllWhen ty
 
@@ -897,7 +912,7 @@ pprIfaceDeclHead :: IfaceContext -> ShowSub -> Name
 pprIfaceDeclHead context ss tc_occ bndrs m_res_kind
   = sdocWithDynFlags $ \ dflags ->
     sep [ pprIfaceContextArr context
-        , pprPrefixIfDeclBndr ss (occName tc_occ)
+        , pprPrefixIfDeclBndr (ss_how_much ss) (occName tc_occ)
           <+> pprIfaceTyConBinders (suppressIfaceInvisibles dflags bndrs bndrs)
         , maybe empty (\res_kind -> dcolon <+> pprIfaceType res_kind) m_res_kind ]
 
@@ -921,12 +936,13 @@ pprIfaceConDecl ss gadt_style fls tycon tc_binders parent
   | gadt_style            = pp_prefix_con <+> dcolon <+> ppr_ty
   | not (null fields)     = pp_prefix_con <+> pp_field_args
   | is_infix
-  , [ty1, ty2] <- pp_args = sep [ty1, pprInfixIfDeclBndr ss (occName name), ty2]
+  , [ty1, ty2] <- pp_args = sep [ty1, pprInfixIfDeclBndr how_much (occName name), ty2]
   | otherwise             = pp_prefix_con <+> sep pp_args
   where
+    how_much = ss_how_much ss
     tys_w_strs :: [(IfaceBang, IfaceType)]
     tys_w_strs = zip stricts arg_tys
-    pp_prefix_con = pprPrefixIfDeclBndr ss (occName name)
+    pp_prefix_con = pprPrefixIfDeclBndr how_much (occName name)
 
     (univ_tvs, pp_res_ty) = mk_user_con_res_ty eq_spec
     ppr_ty = pprIfaceForAllPart (map tv_to_forall_bndr univ_tvs ++ ex_tvs)
@@ -959,8 +975,10 @@ pprIfaceConDecl ss gadt_style fls tycon tc_binders parent
 
     maybe_show_label :: IfaceTopBndr -> (IfaceBang, IfaceType) -> Maybe SDoc
     maybe_show_label sel bty
-      | showSub ss sel = Just (pprPrefixIfDeclBndr ss lbl <+> dcolon <+> pprBangTy bty)
-      | otherwise      = Nothing
+      | showSub ss sel =
+          Just (pprPrefixIfDeclBndr how_much lbl <+> dcolon <+> pprBangTy bty)
+      | otherwise      =
+          Nothing
       where
         -- IfaceConDecl contains the name of the selector function, so
         -- we have to look up the field label (in case
@@ -981,7 +999,7 @@ pprIfaceConDecl ss gadt_style fls tycon tc_binders parent
         con_univ_tvs = filterOut done_univ_tv (map ifTyConBinderTyVar tc_binders)
 
     ppr_tc_app gadt_subst dflags
-       = pprPrefixIfDeclBndr ss (occName tycon)
+       = pprPrefixIfDeclBndr how_much (occName tycon)
          <+> sep [ pprParendIfaceType (substIfaceTyVar gadt_subst tv)
                  | (tv,_kind)
                      <- map ifTyConBinderTyVar $
