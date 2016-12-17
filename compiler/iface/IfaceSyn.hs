@@ -627,14 +627,14 @@ showToIface = ShowSub { ss_how_much = ShowIface ppr
                       , ss_forall = ShowForAllWhen }
 
 ppShowIface :: ShowSub -> SDoc -> SDoc
-ppShowIface (ShowSub { ss_how_much = ShowIface ppr }) doc = doc
-ppShowIface _                                         _   = Outputable.empty
+ppShowIface (ShowSub { ss_how_much = ShowIface _ }) doc = doc
+ppShowIface _                                       _   = Outputable.empty
 
 -- show if all sub-components or the complete interface is shown
 ppShowAllSubs :: ShowSub -> SDoc -> SDoc -- Note [Minimal complete definition]
-ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] })   doc = doc
-ppShowAllSubs (ShowSub { ss_how_much = ShowIface ppr }) doc = doc
-ppShowAllSubs _                                         _   = Outputable.empty
+ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] }) doc = doc
+ppShowAllSubs (ShowSub { ss_how_much = ShowIface _ }) doc = doc
+ppShowAllSubs _                                       _   = Outputable.empty
 
 ppShowRhs :: ShowSub -> SDoc -> SDoc
 ppShowRhs (ShowSub { ss_how_much = ShowHeader }) _   = Outputable.empty
