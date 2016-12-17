@@ -592,7 +592,8 @@ data ShowHowMuch
   = ShowHeader
   {-|
   []     <=> Print all sub-components
-  (n:ns) <=> print sub-component 'n' with ShowSub=ns, elide other sub-components to "..."
+  (n:ns) <=> print sub-component 'n' with ShowSub=ns,
+  elide other sub-components to "..."
   -}
   -- May 14: the list is max 1 element long at the moment
   | ShowSome [OccName]
@@ -936,7 +937,10 @@ pprIfaceConDecl ss gadt_style fls tycon tc_binders parent
   | gadt_style            = pp_prefix_con <+> dcolon <+> ppr_ty
   | not (null fields)     = pp_prefix_con <+> pp_field_args
   | is_infix
-  , [ty1, ty2] <- pp_args = sep [ty1, pprInfixIfDeclBndr how_much (occName name), ty2]
+  , [ty1, ty2] <- pp_args = sep [ ty1
+                                , pprInfixIfDeclBndr how_much (occName name)
+                                , ty2]
+
   | otherwise             = pp_prefix_con <+> sep pp_args
   where
     how_much = ss_how_much ss

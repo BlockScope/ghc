@@ -134,7 +134,8 @@ pprTyThing ss ty_thing
     ss' = case ss_how_much ss of
       ShowHeader  -> ss
       ShowSome _  -> ss
-      ShowIface _ -> ss { ss_how_much = ShowIface (ppr_bndr $ getName ty_thing) }
+      ShowIface _ -> ss
+        { ss_how_much = ShowIface (ppr_bndr $ getName ty_thing) }
 
     ppr_bndr :: Name -> OccName -> SDoc
     ppr_bndr name
