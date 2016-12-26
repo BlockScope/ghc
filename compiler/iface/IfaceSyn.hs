@@ -588,17 +588,17 @@ data ShowSub
       , ss_forall :: ShowForAllFlag }
 
 data ShowHowMuch
-  -- |Header information only, not rhs
-  = ShowHeader
-  {-|
-  []     <=> Print all sub-components
-  (n:ns) <=> print sub-component 'n' with ShowSub=ns,
-  elide other sub-components to "..."
-  -}
-  -- May 14: the list is max 1 element long at the moment
+  = ShowHeader -- ^Header information only, not rhs
   | ShowSome [OccName]
-  -- |Everything including GHC-internal information (used in --show-iface)
+  -- ^ Show only some sub-components. Specifically,
+  --
+  -- [@[]@] Print all sub-components.
+  -- [@(n:ns)@] Print sub-component @n@ with @ShowSub = ns@;
+  -- elide other sub-components to @...@
+  -- May 14: the list is max 1 element long at the moment
   | ShowIface (OccName -> SDoc)
+  -- ^Everything including GHC-internal information (used in --show-iface)
+  -- See Note [Printing IfaceDecl binders]
 
 {-
 Note [Printing IfaceDecl binders]
