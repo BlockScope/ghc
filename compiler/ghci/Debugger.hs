@@ -216,7 +216,7 @@ pprTypeAndContents :: GhcMonad m => Id -> m SDoc
 pprTypeAndContents id = do
   dflags  <- GHC.getSessionDynFlags
   let pcontents = gopt Opt_PrintBindContents dflags
-      pprdId    = ((pprTyThing showToHeader). AnId) id
+      pprdId    = (pprTyThing showToHeader . AnId) id
   if pcontents
     then do
       let depthBound = 100
