@@ -587,18 +587,20 @@ data ShowSub
       { ss_how_much :: ShowHowMuch
       , ss_forall :: ShowForAllFlag }
 
+-- See Note [Printing IfaceDecl binders]
+type AltPpr = Maybe (OccName -> SDoc)
+
 data ShowHowMuch
-  = ShowHeader -- ^Header information only, not rhs
-  | ShowSome [OccName]
+  = ShowHeader AltPpr -- ^Header information only, not rhs
+  | ShowSome [OccName] AltPpr 
   -- ^ Show only some sub-components. Specifically,
   --
   -- [@[]@] Print all sub-components.
   -- [@(n:ns)@] Print sub-component @n@ with @ShowSub = ns@;
   -- elide other sub-components to @...@
   -- May 14: the list is max 1 element long at the moment
-  | ShowIface (OccName -> SDoc)
+  | ShowIface
   -- ^Everything including GHC-internal information (used in --show-iface)
-  -- See Note [Printing IfaceDecl binders]
 
 {-
 Note [Printing IfaceDecl binders]
@@ -614,35 +616,35 @@ everything unqualified, so we can just print the OccName directly.
 -}
 
 instance Outputable ShowHowMuch where
-  ppr ShowHeader      = text "ShowHeader"
-  ppr (ShowIface _)   = text "ShowIface"
-  ppr (ShowSome occs) = text "ShowSome" <+> ppr occs
+  ppr (ShowHeader _)    = text "ShowHeader"
+  ppr ShowIface         = text "ShowIface"
+  ppr (ShowSome occs _) = text "ShowSome" <+> ppr occs
 
 showToHeader :: ShowSub
-showToHeader = ShowSub { ss_how_much = ShowHeader
+showToHeader = ShowSub { ss_how_much = ShowHeader Nothing
                        , ss_forall = ShowForAllWhen }
 
 showToIface :: ShowSub
-showToIface = ShowSub { ss_how_much = ShowIface ppr
+showToIface = ShowSub { ss_how_much = ShowIface
                       , ss_forall = ShowForAllWhen }
 
 ppShowIface :: ShowSub -> SDoc -> SDoc
-ppShowIface (ShowSub { ss_how_much = ShowIface _ }) doc = doc
-ppShowIface _                                       _   = Outputable.empty
+ppShowIface (ShowSub { ss_how_much = ShowIface }) doc = doc
+ppShowIface _                                     _   = Outputable.empty
 
 -- show if all sub-components or the complete interface is shown
 ppShowAllSubs :: ShowSub -> SDoc -> SDoc -- Note [Minimal complete definition]
-ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] }) doc = doc
-ppShowAllSubs (ShowSub { ss_how_much = ShowIface _ }) doc = doc
-ppShowAllSubs _                                       _   = Outputable.empty
+ppShowAllSubs (ShowSub { ss_how_much = ShowSome [] _ }) doc = doc
+ppShowAllSubs (ShowSub { ss_how_much = ShowIface })     doc = doc
+ppShowAllSubs _                                         _   = Outputable.empty
 
 ppShowRhs :: ShowSub -> SDoc -> SDoc
-ppShowRhs (ShowSub { ss_how_much = ShowHeader }) _   = Outputable.empty
-ppShowRhs _                                      doc = doc
+ppShowRhs (ShowSub { ss_how_much = ShowHeader _ }) _   = Outputable.empty
+ppShowRhs _                                        doc = doc
 
 showSub :: HasOccName n => ShowSub -> n -> Bool
-showSub (ShowSub { ss_how_much = ShowHeader })     _     = False
-showSub (ShowSub { ss_how_much = ShowSome (n:_) }) thing = n == occName thing
+showSub (ShowSub { ss_how_much = ShowHeader _ })     _     = False
+showSub (ShowSub { ss_how_much = ShowSome (n:_) _ }) thing = n == occName thing
 showSub (ShowSub { ss_how_much = _ })              _     = True
 
 ppr_trim :: [Maybe SDoc] -> [SDoc]
@@ -857,13 +859,15 @@ pprRoles suppress_if tyCon bndrs roles
          text "type role" <+> tyCon <+> hsep (map ppr froles)
 
 pprInfixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
-pprInfixIfDeclBndr (ShowIface ppr_bndr) name
+pprInfixIfDeclBndr (ShowSome _ (Just ppr_bndr)) name
   = pprInfixVar (isSymOcc name) (ppr_bndr name)
 pprInfixIfDeclBndr _ name
   = pprInfixVar (isSymOcc name) (ppr name)
 
 pprPrefixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
-pprPrefixIfDeclBndr (ShowIface ppr_bndr) name
+pprPrefixIfDeclBndr (ShowHeader (Just ppr_bndr)) name
+  = parenSymOcc name (ppr_bndr name)
+pprPrefixIfDeclBndr (ShowSome _ (Just ppr_bndr)) name
   = parenSymOcc name (ppr_bndr name)
 pprPrefixIfDeclBndr _ name
   = parenSymOcc name (ppr name)

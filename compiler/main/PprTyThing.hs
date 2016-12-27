@@ -116,7 +116,7 @@ pprTyThingInContext show_sub thing
           Just parent ->
             go (getOccName thing : ss) parent
           Nothing ->
-            pprTyThing (show_sub { ss_how_much = ShowSome ss }) thing
+            pprTyThing (show_sub { ss_how_much = ShowSome ss Nothing }) thing
 
 -- | Like 'pprTyThingInContext', but adds the defining location.
 pprTyThingInContextLoc :: TyThing -> SDoc
@@ -132,22 +132,22 @@ pprTyThing ss ty_thing
   = pprIfaceDecl ss' (tyThingToIfaceDecl ty_thing)
   where
     ss' = case ss_how_much ss of
-      ShowHeader  -> ss
-      ShowSome [] -> ss
-        { ss_how_much = ShowIface (ppr_bndr $ getName ty_thing) }
-      ShowSome _  -> ss
-      ShowIface _ -> ss
+      ShowHeader Nothing  -> ss { ss_how_much = ShowHeader ppr' }
+      ShowSome xs Nothing -> ss { ss_how_much = ShowSome xs ppr' }
+      _                   -> ss
 
-    ppr_bndr :: Name -> OccName -> SDoc
+    ppr' = ppr_bndr $ getName ty_thing
+
+    ppr_bndr :: Name -> Maybe (OccName -> SDoc)
     ppr_bndr name
       | isBuiltInSyntax name
-         = ppr
+         = Nothing
       | otherwise
          = case nameModule_maybe name of
-           Just mod -> \ occ -> getPprStyle $ \sty ->
-                              pprModulePrefix sty mod occ <> ppr occ
-           Nothing  -> WARN( True, ppr name ) ppr
-           -- Nothing is unexpected here; TyThings have External names
+             Just mod -> Just $ \occ -> getPprStyle $ \sty ->
+               pprModulePrefix sty mod occ <> ppr occ
+             Nothing  -> WARN( True, ppr name ) Nothing
+             -- Nothing is unexpected here; TyThings have External names
 
 pprTypeForUser :: Type -> SDoc
 -- The type is tidied
