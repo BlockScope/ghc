@@ -592,7 +592,7 @@ type AltPpr = Maybe (OccName -> SDoc)
 
 data ShowHowMuch
   = ShowHeader AltPpr -- ^Header information only, not rhs
-  | ShowSome [OccName] AltPpr 
+  | ShowSome [OccName] AltPpr
   -- ^ Show only some sub-components. Specifically,
   --
   -- [@[]@] Print all sub-components.
