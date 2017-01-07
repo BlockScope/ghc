@@ -20,7 +20,8 @@ module PprTyThing (
 #include "HsVersions.h"
 
 import Type    ( TyThing(..) )
-import IfaceSyn ( ShowSub(..), ShowHowMuch(..), showToHeader, pprIfaceDecl )
+import IfaceSyn ( ShowSub(..), ShowHowMuch(..), AltPpr(..)
+  , showToHeader, pprIfaceDecl )
 import CoAxiom ( coAxiomTyCon )
 import HscTypes( tyThingParent_maybe )
 import MkIface ( tyThingToIfaceDecl )
@@ -116,7 +117,9 @@ pprTyThingInContext show_sub thing
           Just parent ->
             go (getOccName thing : ss) parent
           Nothing ->
-            pprTyThing (show_sub { ss_how_much = ShowSome ss Nothing }) thing
+            pprTyThing
+              (show_sub { ss_how_much = ShowSome ss (AltPpr Nothing) })
+              thing
 
 -- | Like 'pprTyThingInContext', but adds the defining location.
 pprTyThingInContextLoc :: TyThing -> SDoc
@@ -132,11 +135,11 @@ pprTyThing ss ty_thing
   = pprIfaceDecl ss' (tyThingToIfaceDecl ty_thing)
   where
     ss' = case ss_how_much ss of
-      ShowHeader Nothing  -> ss { ss_how_much = ShowHeader ppr' }
-      ShowSome xs Nothing -> ss { ss_how_much = ShowSome xs ppr' }
+      ShowHeader (AltPpr Nothing)  -> ss { ss_how_much = ShowHeader ppr' }
+      ShowSome xs (AltPpr Nothing) -> ss { ss_how_much = ShowSome xs ppr' }
       _                   -> ss
 
-    ppr' = ppr_bndr $ getName ty_thing
+    ppr' = AltPpr $ ppr_bndr $ getName ty_thing
 
     ppr_bndr :: Name -> Maybe (OccName -> SDoc)
     ppr_bndr name

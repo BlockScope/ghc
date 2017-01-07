@@ -35,7 +35,7 @@ module IfaceSyn (
         -- Pretty printing
         pprIfaceExpr,
         pprIfaceDecl,
-        ShowSub(..), ShowHowMuch(..), showToIface, showToHeader
+        AltPpr(..), ShowSub(..), ShowHowMuch(..), showToIface, showToHeader
     ) where
 
 #include "HsVersions.h"
@@ -588,7 +588,8 @@ data ShowSub
       , ss_forall :: ShowForAllFlag }
 
 -- See Note [Printing IfaceDecl binders]
-type AltPpr = Maybe (OccName -> SDoc)
+-- The alternative pretty printer referred to in the note.
+newtype AltPpr = AltPpr (Maybe (OccName -> SDoc))
 
 data ShowHowMuch
   = ShowHeader AltPpr -- ^Header information only, not rhs
@@ -621,7 +622,7 @@ instance Outputable ShowHowMuch where
   ppr (ShowSome occs _) = text "ShowSome" <+> ppr occs
 
 showToHeader :: ShowSub
-showToHeader = ShowSub { ss_how_much = ShowHeader Nothing
+showToHeader = ShowSub { ss_how_much = ShowHeader $ AltPpr Nothing
                        , ss_forall = ShowForAllWhen }
 
 showToIface :: ShowSub
@@ -859,15 +860,15 @@ pprRoles suppress_if tyCon bndrs roles
          text "type role" <+> tyCon <+> hsep (map ppr froles)
 
 pprInfixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
-pprInfixIfDeclBndr (ShowSome _ (Just ppr_bndr)) name
+pprInfixIfDeclBndr (ShowSome _ (AltPpr (Just ppr_bndr))) name
   = pprInfixVar (isSymOcc name) (ppr_bndr name)
 pprInfixIfDeclBndr _ name
   = pprInfixVar (isSymOcc name) (ppr name)
 
 pprPrefixIfDeclBndr :: ShowHowMuch -> OccName -> SDoc
-pprPrefixIfDeclBndr (ShowHeader (Just ppr_bndr)) name
+pprPrefixIfDeclBndr (ShowHeader (AltPpr (Just ppr_bndr))) name
   = parenSymOcc name (ppr_bndr name)
-pprPrefixIfDeclBndr (ShowSome _ (Just ppr_bndr)) name
+pprPrefixIfDeclBndr (ShowSome _ (AltPpr (Just ppr_bndr))) name
   = parenSymOcc name (ppr_bndr name)
 pprPrefixIfDeclBndr _ name
   = parenSymOcc name (ppr name)
